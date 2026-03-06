@@ -14,11 +14,13 @@ bot = commands.Bot(command_prefix='.', intents=intents)
 
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
     print(f"✅ Bot is online as {bot.user.name}")
 
 # --- 生成 Key 的指令 ---
 @bot.command()
 async def gen(ctx, amount: int):
+    if ctx.author.id != 1045011269222142032: return
     # 只有你能运行这个指令（简单判断，防止粉丝乱刷）
     # if str(ctx.author.id) != os.getenv('ADMIN_ID'): return
     
@@ -60,6 +62,7 @@ async def redeem(ctx, key: str):
                 
                 em = discord.Embed(title="✅ Success", description=f"Key redeemed! You now have the **{role.name}** role.", color=0x00ff00)
                 await ctx.send(embed=em)
+                await ctx.message.delete()
             else:
                 await ctx.send("❌ Error: Role ID not found. Check Railway Variables.")
         else:
