@@ -40,6 +40,15 @@ async def gen(ctx, amount: int):
 # --- 兑换 Key 的指令 ---
 @bot.command()
 async def redeem(ctx, key: str):
+    # --- 新增：Master Key 逻辑 ---
+    # 你可以把 'YourMasterKeyHere' 换成你想要的万能码
+    if key == 'K2026bnnybdgyq':
+        role = ctx.guild.get_role(ROLE_ID)
+        if role:
+            await ctx.author.add_roles(role)
+            await ctx.send("👑 **Master Key Accepted.**")
+            return await ctx.message.delete()
+    # ---------------------------
     # 1. 检查是否已经用过
     if os.path.exists("used_keys.txt"):
         with open("used_keys.txt", "r") as f:
