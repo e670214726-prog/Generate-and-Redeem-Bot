@@ -1,62 +1,74 @@
-from discord.ext import commands
 import discord
-from time import sleep
+from discord.ext import commands
 import uuid
+import os
 
-bot = commands.Bot(command_prefix='.', intents=discord.Intents.all())
+# 1. 从 Railway 的 Variables 读取配置
+TOKEN = os.getenv('DISCORD_TOKEN')
+# 我们直接用 Role ID，比用名字更准确（不会因为改名失效）
+ROLE_ID = int(os.getenv('ROLE_ID')) if os.getenv('ROLE_ID') else None
 
-yourrole = 'Buyer'
+# 设置机器人指令前缀和意图
+intents = discord.Intents.all()
+bot = commands.Bot(command_prefix='.', intents=intents)
 
 @bot.event
 async def on_ready():
-    print("Bot is online and ready")
+    print(f"✅ Bot is online as {bot.user.name}")
 
+# --- 生成 Key 的指令 ---
 @bot.command()
-async def gen(ctx, amount):
-    key_amt = range(int(amount))
-    f = open("keys.txt", "a")
-    show_key = ''
-    for x in key_amt:
-        key = str(uuid.uuid4())
-        show_key += "\n" + key
-        f.write(key)
-        f.write("\n")
+async def gen(ctx, amount: int):
+    # 只有你能运行这个指令（简单判断，防止粉丝乱刷）
+    # if str(ctx.author.id) != os.getenv('ADMIN_ID'): return
+    
+    keys = []
+    # 确保文件存在，防止读取报错
+    if not os.path.exists("keys.txt"): open("keys.txt", "w").close()
+    
+    with open("keys.txt", "a") as f:
+        for _ in range(amount):
+            key = str(uuid.uuid4())
+            keys.append(key)
+            f.write(key + "\n")
+    
+    keys_str = "\n".join(keys)
+    await ctx.send(f"🔑 **Generated {amount} Keys:**\n```\n{keys_str}\n```")
 
-    if len(str(show_key)) == 37:
-        show_key = show_key.replace('\n', '')
-        await ctx.send(f"Key: {show_key}")
-        return 0
-    if len(str(show_key)) > 37:
-        await ctx.send(f"Keys: {show_key}")
-    else:
-        await ctx.send("Somthings wrong")
-
+# --- 兑换 Key 的指令 ---
 @bot.command()
-async def redeem(ctx, key):
-    if len(key) == 36:
-        with open("used keys.txt") as f:
+async def redeem(ctx, key: str):
+    # 1. 检查是否已经用过
+    if os.path.exists("used_keys.txt"):
+        with open("used_keys.txt", "r") as f:
             if key in f.read():
-                em = discord.Embed(color=0xff0000)
-                em.add_field(name="Invalid Key", value="Inputed key has already been used!")
-                await ctx.send(embed=em)
-                return 0
-        with open("keys.txt") as f:
-            if key in f.read():
-                role = discord.utils.get(ctx.guild.roles, name=yourrole)
+                return await ctx.send(embed=discord.Embed(title="❌ Invalid", description="This key has already been used!", color=0xff0000))
+
+    # 2. 检查是否存在于生成的 Key 列表中
+    if os.path.exists("keys.txt"):
+        with open("keys.txt", "r") as f:
+            all_keys = f.read().splitlines()
+        
+        if key in all_keys:
+            # 找到对应的身分组
+            role = ctx.guild.get_role(ROLE_ID)
+            if role:
                 await ctx.author.add_roles(role)
-                em = discord.Embed(color=0x008525)
-                em.add_field(name="Key Redeemed", value="Key has now been redeemed")
+                # 记录到已使用列表
+                with open("used_keys.txt", "a") as f:
+                    f.write(key + "\n")
+                
+                em = discord.Embed(title="✅ Success", description=f"Key redeemed! You now have the **{role.name}** role.", color=0x00ff00)
                 await ctx.send(embed=em)
-                f = open("used keys.txt", "w")
-                f.write(key)
-                f.write('\n')
             else:
-                em = discord.Embed(color=0xff0000)
-                em.add_field(name="Invalid Key", value="Inputed key has already been used!")
-                await ctx.send(embed=em)
+                await ctx.send("❌ Error: Role ID not found. Check Railway Variables.")
+        else:
+            await ctx.send("❌ Invalid Key: This key does not exist.")
     else:
-        em = discord.Embed(color=0xff0000)
-        em.add_field(name="Invalid Key", value="Inputed key has already been used!")
-        await ctx.send(embed=em)
+        await ctx.send("❌ No keys have been generated yet.")
 
-bot.run('discord bot token goes here')
+# 3. 运行机器人
+if TOKEN:
+    bot.run(TOKEN)
+else:
+    print("❌ Error: DISCORD_TOKEN not found in environment variables!")
