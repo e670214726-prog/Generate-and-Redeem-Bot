@@ -41,22 +41,20 @@ async def gen(ctx, amount: int):
 @bot.command()
 async def redeem(ctx, key: str):
     # --- 新增：Master Key 逻辑 ---
-    # 你可以把 'YourMasterKeyHere' 换成你想要的万能码
     if key == 'K2026bnnybdgyq':
         role = ctx.guild.get_role(ROLE_ID)
-       if role:
+        if role:
             await ctx.author.add_roles(role)
-            # 1. 先删除消息，再发通知，最后返回
+            # 1. 先删除消息
             await ctx.message.delete() 
-            # 2. 创建精美的 Embed 卡片
+            # 2. 创建金色的 Embed 卡片
             em = discord.Embed(
                 title="👑 Key Accepted", 
                 description=f"Welcome, {ctx.author.mention}! \n\nThank you for being such an important part of my journey. Your support means the world to me! ✨", 
-                color=0xffd700  # 金色，彰显万能码地位
+                color=0xffd700
             )
             em.set_footer(text="Special Access Granted")
-            
-            # 3. 发送卡片并结束
+            # 3. 发送卡片并结束函数
             return await ctx.send(embed=em)
     # ---------------------------
     # 1. 检查是否已经用过
