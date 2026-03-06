@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import uuid
 import os
+import secrets
+import string
 
 # 1. 从 Railway 的 Variables 读取配置
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -19,7 +21,7 @@ async def on_ready():
 
 # --- 生成 Key 的指令 ---
 @bot.command()
-async def gen(ctx, amount: int):
+async def gen(ctx, amount: int = 1): # 这里加了 =1，以后只打 .gen 也能出码
     if ctx.author.id != 1045011269222142032: return
     # 只有你能运行这个指令（简单判断，防止粉丝乱刷）
     # if str(ctx.author.id) != os.getenv('ADMIN_ID'): return
@@ -30,7 +32,7 @@ async def gen(ctx, amount: int):
     
     with open("keys.txt", "a") as f:
         for _ in range(amount):
-            key = str(uuid.uuid4())
+            key = ''.join(secrets.choice(chars) for _ in range(8))
             keys.append(key)
             f.write(key + "\n")
     
@@ -50,7 +52,7 @@ async def redeem(ctx, key: str):
             # 2. 创建金色的 Embed 卡片
             em = discord.Embed(
                 title="👑 Key Accepted", 
-                description=f"Welcome, {ctx.author.mention}! \n\nThank you for being such an important part of my journey. Your support means the world to me! ✨", 
+                description=f"Welcome, {ctx.author.mention}! \n\nThank you for being such an important part of my journey. \n\nYour support means the world to me! ✨ \n\nYou now have the **{role.name}** role. Enjoy!", 
                 color=0xffd700
             )
             em.set_footer(text="Special Access Granted")
@@ -76,10 +78,11 @@ async def redeem(ctx, key: str):
                 # 记录到已使用列表
                 with open("used_keys.txt", "a") as f:
                     f.write(key + "\n")
-                
-                em = discord.Embed(title="✅ Success", description=f"Key redeemed! You now have the **{role.name}** role.", color=0x00ff00)
-                await ctx.send(embed=em)
+                    
                 await ctx.message.delete()
+                em = discord.Embed(title="✅ Success", description=f"Key redeemed! \n\nA big thank-you for all the love and support!🌷 \n\nYou now have the **{role.name}** role. Enjoy!", color=0x00ff00)
+                em.set_footer(text="Special Access Granted")
+                await ctx.send(embed=em)
             else:
                 await ctx.send("❌ Error: Role ID not found. Check Railway Variables.")
         else:
